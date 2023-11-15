@@ -28,6 +28,15 @@ using (var database = new Database())
 
         Console.WriteLine($"{brusselsAirport.Country} ({brusselsAirport.Timezone})");
     }
+
+    //var airports = await database.Airports.ToListAsync();
+    //var brusselsAirport = airports
+    //    .First(it => it.NormalizedIata == "BRU" ||
+    //                 EF.Functions.ILike(it.Name, "brussels airport"));
+
+    //var brusselsAirport = database.Airports
+    //    .First(it => it.NormalizedIata == "BRU" ||
+    //                 it.Name.Contains("brussels airport", StringComparison.OrdinalIgnoreCase));
 }
 
 // Slow command
