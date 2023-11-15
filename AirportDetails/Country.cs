@@ -22,4 +22,7 @@ public class Country
 
     [InverseProperty(nameof(Airport.Country))]
     public List<Airport> Airports { get; set; } = new();
+
+    [InverseProperty(nameof(Airline.Country))]
+    public List<Airline> Airlines { get; set; } = new();
 }

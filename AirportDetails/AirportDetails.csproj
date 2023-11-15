@@ -18,7 +18,11 @@
     </ItemGroup>
 
     <ItemGroup>
+        <None Remove="Data\airlines.csv" />
         <None Remove="Data\countries.tsv" />
+        <Content Include="Data\airlines.csv">
+          <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        </Content>
         <Content Include="Data\countries.tsv">
             <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
         </Content>

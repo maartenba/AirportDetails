@@ -39,41 +39,42 @@ using (var database = new Database())
             .OrderBy(country => country.IsoCode)
             .ToListAsync();
 
-        var countriesAndAirports = countries
+        var countriesAndAirportsAndAirlines = countries
             .Select(country => new
             {
                 Country = country,
                 Airports = database.Airports
                     .Where(airport => airport.Country == country)
+                    .ToList(),
+                Airlines = database.Airlines
+                    .Where(airline => airline.Country == country)
                     .ToList()
             })
             .ToList();
 
-        // var countriesAndAirports = await database.Countries
-        //     .Select(country => new
-        //     {
-        //         Country = country.Name,
-        //         NumberOfAirports = country.Airports.Count
-        //     })
-        //     .ToListAsync();
-
-        foreach (var countryAndAirports in countriesAndAirports)
+        foreach (var countryDetails in countriesAndAirportsAndAirlines)
         {
             Console.WriteLine(
-                $"{countryAndAirports.Country.Name} has {countryAndAirports.Airports.Count} known airports.");
+                $"{countryDetails.Country.Name} has {countryDetails.Airports.Count} known airports.");
+            Console.WriteLine(
+                $"{countryDetails.Country.Name} has {countryDetails.Airlines.Count} known airlines.");
         }
     }
     else
     {
-        var countriesAndAirports = await database.Countries
+        var countriesAndAirportsAndAirlines = await database.Countries
             .Include(country => country.Airports)
+            .Include(country => country.Airlines)
             .OrderBy(country => country.IsoCode)
             .AsSplitQuery()
             .ToListAsync();
 
-        foreach (var countryAndAirports in countriesAndAirports)
+        foreach (var countryDetails in countriesAndAirportsAndAirlines)
         {
-            Console.WriteLine($"{countryAndAirports.Name} has {countryAndAirports.Airports.Count} known airports.");
+            Console.WriteLine(
+                $"{countryDetails.Name} has {countryDetails.Airports.Count} known airports.");
+            Console.WriteLine(
+                $"{countryDetails.Name} has {countryDetails.Airlines.Count} known airlines.");
         }
     }
 }
@@ -130,6 +131,10 @@ async Task EnsureDatabase(bool useBulkInsert)
         }
         await database.SaveChangesAsync();
     }
+    else
+    {
+        bulkInsertCountries.AddRange(await database.Countries.ToListAsync());
+    }
 
     // Seed airports if none exist
     var bulkInsertAirports = new List<Airport>();
@@ -181,6 +186,58 @@ async Task EnsureDatabase(bool useBulkInsert)
         if (useBulkInsert)
         {
             database.BulkInsert(bulkInsertAirports);
+        }
+
+        await database.SaveChangesAsync();
+    }
+
+    // Seed airlines if none exist
+    var bulkInsertAirlines = new List<Airline>();
+    if (await database.Airlines.AnyAsync() == false)
+    {
+        var airlinesCsvPath = Path.Combine("Data", "airlines.csv");
+
+        using var reader = new StreamReader(airlinesCsvPath);
+        using var csv = new CsvReader(new CsvParser(reader, new CsvConfiguration(CultureInfo.GetCultureInfo("en-US"))
+        {
+            Delimiter = ","
+        }, leaveOpen: false));
+
+        await csv.ReadAsync();
+
+        while (csv.Parser.RawRecord.StartsWith("#"))
+        {
+            await csv.ReadAsync();
+        }
+
+        csv.ReadHeader();
+
+        while (await csv.ReadAsync())
+        {
+            var country = bulkInsertCountries.FirstOrDefault(it =>
+                it.NormalizedName == csv.GetField<string>("Country")!.ToUpperInvariant());
+
+            // Id,Name,Alias,IATA,ICAO,Callsign,Country,Active
+            var airline = new Airline
+            {
+                Name = csv.GetField<string>("Name")!,
+                NormalizedName = csv.GetField<string>("Name")!.ToUpperInvariant(),
+                Country = country,
+                Iata = ValueOrNull(csv.GetField<string>("IATA")),
+                NormalizedIata = ValueOrNull(csv.GetField<string>("IATA"))?.ToUpperInvariant(),
+                Callsign = ValueOrNull(csv.GetField<string>("Callsign"))
+            };
+
+            bulkInsertAirlines.Add(airline);
+            if (!useBulkInsert)
+            {
+                database.Add(airline);
+            }
+        }
+
+        if (useBulkInsert)
+        {
+            database.BulkInsert(bulkInsertAirlines);
         }
 
         await database.SaveChangesAsync();

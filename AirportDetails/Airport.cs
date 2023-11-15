@@ -38,4 +38,6 @@ public class Airport
 
     [MaxLength(60)]
     public string? Timezone { get; set; }
+
+    public List<Airline> Airlines { get; set; } = new();
 }
