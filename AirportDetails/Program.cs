@@ -190,6 +190,10 @@ async Task EnsureDatabase(bool useBulkInsert)
 
         await database.SaveChangesAsync();
     }
+    else
+    {
+        bulkInsertAirports.AddRange(await database.Airports.ToListAsync());
+    }
 
     // Seed airlines if none exist
     var bulkInsertAirlines = new List<Airline>();
@@ -217,7 +221,10 @@ async Task EnsureDatabase(bool useBulkInsert)
             var country = bulkInsertCountries.FirstOrDefault(it =>
                 it.NormalizedName == csv.GetField<string>("Country")!.ToUpperInvariant());
 
-            // Id,Name,Alias,IATA,ICAO,Callsign,Country,Active
+            var airports = bulkInsertAirports
+                .Where(it => it.Country == country).Take(Random.Shared.Next(1, 2))
+                .ToList();
+
             var airline = new Airline
             {
                 Name = csv.GetField<string>("Name")!,
@@ -225,7 +232,8 @@ async Task EnsureDatabase(bool useBulkInsert)
                 Country = country,
                 Iata = ValueOrNull(csv.GetField<string>("IATA")),
                 NormalizedIata = ValueOrNull(csv.GetField<string>("IATA"))?.ToUpperInvariant(),
-                Callsign = ValueOrNull(csv.GetField<string>("Callsign"))
+                Callsign = ValueOrNull(csv.GetField<string>("Callsign")),
+                Airports = airports
             };
 
             bulkInsertAirlines.Add(airline);
@@ -241,5 +249,9 @@ async Task EnsureDatabase(bool useBulkInsert)
         }
 
         await database.SaveChangesAsync();
+    }
+    else
+    {
+        bulkInsertAirlines.AddRange(await database.Airlines.ToListAsync());
     }
 }

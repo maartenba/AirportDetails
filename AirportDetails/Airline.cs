@@ -1,4 +1,5 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace AirportDetails;
 
@@ -22,4 +23,6 @@ public class Airline
     public string? Callsign { get; set; }
 
     public Country? Country { get; set; }
+
+    public List<Airport> Airports { get; set; } = new();
 }
